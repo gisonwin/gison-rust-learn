@@ -1,11 +1,6 @@
-use axum::{
-    body::{Body,Bytes},
-    extract::Request,
-    http::StatusCode,
-    middleware::{IntoResponse,Response},
-    routing::get,routing::post,Json,Router,response::Html
-};
+use axum::{routing::get,routing::post,http::StatusCode,Json,Router,response::Html};
 use serde::{Deserialize,Serialize};
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
@@ -14,7 +9,8 @@ async fn main() {
     let app = Router::new().route("/", get(handler));
     let listener
         = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-     axum::serve(listener, app).await.unwrap();
+    info!("server listening on {}",listener.local_addr().unwrap());
+    axum::serve(listener, app).await.unwrap();
 }
 async fn handler() -> Html<&'static str>{
     Html("<h1>Hello Axum</h1>")
