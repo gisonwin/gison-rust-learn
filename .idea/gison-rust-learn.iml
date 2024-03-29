@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/hello-world/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/generate-random-number/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/deep-into-rust/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
