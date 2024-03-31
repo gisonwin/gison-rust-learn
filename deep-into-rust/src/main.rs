@@ -1,4 +1,12 @@
+mod thread_learn;
+mod threadpool;
+mod async_await;
+
+// use thread_learn::thread_learn;
 use std::{thread, time::Duration};
+use crate::thread_learn::thread_learn::*;
+use crate::threadpool::thread_pool::{poolite_fibonacci, rayon_thread_pool, scoped_threadpool, use_thread_pool};
+
 
 pub fn start_one_thread() {
     let handle = thread::spawn(|| { println!("hello from a thread!") });
@@ -103,7 +111,8 @@ pub fn thread_park2() {
     //如果调用unpark 接下来的park会立即 返回
     handle.join().unwrap();
 }
-
+//一个线程只且个令牌，令牌或存在或只有一个，多次调用unpark也是针对一个令牌的操作，如果调用多次unpark会导致新建的线程
+// 一直处于parked状态。据官方文档，park函数的调用并不保证线程永远保持parked状态，所以调用时要很小心。
 
 fn main() {
     // start_one_thread();
@@ -114,7 +123,24 @@ fn main() {
     // available_cpu();
     // start_thread_with_sleep();
     // start_thread_with_yield();
-    thread_park2();
+    // thread_park2();
+    // start_threads_with_threadlocal();
+    // start_one_thread_with_move();
+    // start_one_thread_with_move2();
+    // use_affinity();
+    // rayon_thread_pool();
+    // for i in 0..40 {
+    //     print!("{:?} ",fibonacci(i));
+    // }
+    // use_thread_pool();
+    // scoped_threadpool();
+    poolite_fibonacci(40);
 }
 
-
+fn fibonacci(n: u128) -> u128 {
+    match n {
+        0 => 1,
+        1 => 1,
+        _ => fibonacci(n - 1) + fibonacci(n - 2),
+    }
+}
