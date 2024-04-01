@@ -1,3 +1,8 @@
+use tokio::join;
+use std::thread;
+use rayon::ThreadPool;
+use tokio::sync::mpsc;
+
 ///异步编程是一种并发编程,通过在任务执行期间不阻塞线程方式,提高系统的并发能力和响应性.异步编程可以更好地处理IO密集型任务
 ///和并发请示,提高系统的吞吐量和性能.
 /// 异步编程有以下优势:
@@ -94,4 +99,74 @@
 ///
 /// Future trait表示一个异步任务,提供异步任务的执行和状态管理.
 ///
+fn get_two_sites() {
+    let thread_one = thread::spawn(|| download("https://course.rs"));
+    let thread_two = thread::spawn(|| download("https://fancy.rs"));
+    thread_one.join().expect("thread one panicked");
+    thread_two.join().expect("thread two panicked");
+}
 
+fn download(p0: &str) -> bool {
+    true
+}
+
+/// 以上的函数在小项目中去用线程下载文件没有问题,当下载文件的并发请求多起来，一个下载任务占用一个线程的模式就太重了，很容易成为程序的瓶颈。
+/// 我们可以用async方式来解决
+async fn get_two_sites_async() {
+    let future_one = download_async("https://www.foo.com");
+    let future_two = download_async("https://www.bar.com");
+    //同时运行两个future,直至完成
+    let x = join!(future_one,future_two).await;
+    println!("{}", x);
+}
+
+fn download_async(p0: &str) {
+    todo!()
+}
+
+/// 上述代码在异步运行时使用一定数量的线程来调试代码的运行.
+
+/// Tokio是Rust异步编程最重要的运行时库,提供了异步IO,异步任务调度,同步原语等功能.主要组件包括:
+/// - tokio:核心运行时,提供任务调度,io资源等
+/// - tokio::net 异步TCP,UDP的实现
+/// - tokio::sync 互斥量,信号量等并发原语.
+/// - tokio::time 时间相关工具
+/// - tokio::fs 异步文件IO
+#[tokio::main]
+async fn main() {
+    //执行异步任务
+    let join_handle = tokio::spawn(async {
+        //do work
+    });
+    //等待任务完成
+    join_handle.await.expect("panic message");
+}
+
+/// main函数前必须加async,且加上#[tokio::main]属性,这样该main函数就会在异步运行时运行.下面是显式创建运行时方式
+pub fn tokio_async() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        println!("Hello from tokio");
+        rt.spawn(async {
+            println!("Hello from a tokio task");
+            println!(" in spawn");
+        }).await.unwrap();
+    }
+    );
+    rt.spawn_blocking(|| println!("in spawn_blocking"));
+}
+/// tokio运行中时用block_on执行异步任务.用spawn在运行时中异步执行任务,spawn_blocking在线程池中执行阻塞任务.awaitJoinHandler等待异步任务结束.
+
+
+///futures库是Rust库异步编程的基础抽象库,为编写异步代码提供核心的trait和类型.主要有如下功能:
+/// - Future trait:表示一个异步计算的抽象,可通过.await获取其结果
+/// - Stream trait: 表示一个异步的数据流,可通过.await迭代获取其元素
+/// - Sink trait:代表一个可异步接收数据的目标
+/// - Executor : 执行futures的运行时环境
+/// - Utilities: 一些组合,创建futures函数
+
+
+pub fn futures_async(){
+    let pool = ThreadPool::new(Default::default()).expect("Failed to build pool");
+    let (tx,rx) = mpsc::unbounded_channel()::<i32>();
+}

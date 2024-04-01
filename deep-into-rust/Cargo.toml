@@ -11,3 +11,4 @@ rayon = "1.10.0"
 threadpool = "1.8.1"
 scoped-thread-pool = "1.0.4"
 poolite = "0.7.1"
+tokio = { version = "1.36.0", features = ["full"] }
