@@ -168,5 +168,5 @@ pub fn tokio_async() {
 
 pub fn futures_async(){
     let pool = ThreadPool::new(Default::default()).expect("Failed to build pool");
-    let (tx,rx) = mpsc::unbounded_channel()::<i32>();
+    let (tx,rx) = mpsc::unbounded_channel::<i32>();
 }
