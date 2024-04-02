@@ -2,6 +2,7 @@ use tokio::join;
 use std::thread;
 use rayon::ThreadPool;
 use tokio::sync::mpsc;
+use tokio::*;
 
 ///异步编程是一种并发编程,通过在任务执行期间不阻塞线程方式,提高系统的并发能力和响应性.异步编程可以更好地处理IO密集型任务
 ///和并发请示,提高系统的吞吐量和性能.
@@ -155,6 +156,7 @@ pub fn tokio_async() {
     );
     rt.spawn_blocking(|| println!("in spawn_blocking"));
 }
+
 /// tokio运行中时用block_on执行异步任务.用spawn在运行时中异步执行任务,spawn_blocking在线程池中执行阻塞任务.awaitJoinHandler等待异步任务结束.
 
 
@@ -166,7 +168,99 @@ pub fn tokio_async() {
 /// - Utilities: 一些组合,创建futures函数
 
 
-pub fn futures_async(){
+pub fn futures_async() {
     let pool = ThreadPool::new(Default::default()).expect("Failed to build pool");
-    let (tx,rx) = mpsc::unbounded_channel::<i32>();
+    let (tx, rx) = mpsc::unbounded_channel::<i32>();
+    let fut_values = async {
+        let fut_tx_result = async move {
+            (0..100).for_each(|v| {
+                tx.unbounded_send(v).expect("failed to send");
+            })
+        };
+        pool.spawn_ok(fut_tx_result);
+        let fut_values = rx.map(|v| v * 2).collect();
+        fut_values.await
+    };
+
+    // let values: Vec<i32> = executor::block_on(fut_values);
+    // println!("Values={:?}", values);
+}
+
+/// 上例展示使用futures和线程池进行异步编程
+/// 1 创建线程池pool 2 创建一个无边界的通道 tx,rx用来在任务间传递数据 3 定义一个异步任务fut_values,首先用spawn_ok在线程池中异步执行一个任务
+/// 这个任务通过通道发送0-99的数字 4 rx用map创建一个stream,它会将收到的数字乘以2 5用collect收集Stream的结果到Vec.
+/// 6 block_on在主线程中执行这个异步任务并获取结果.
+/// future通过异步处理数据流,可实现非阻塞并发程序,在网络服务编程中很有用,与线程相比,futures的抽象更轻量和高效.
+
+
+///             futures_lite
+///
+/// 这个库是futures的一个子集,它的编译速度更快,且修复了futures API中一些小问题,补充了一些明显的空白,并移除了绝大部分不安全的代码,比futures更加易用,且与其完全兼容.
+///
+use futures_lite::future;
+
+async fn hello_async() {
+    println!("hello, async world");
+}
+
+///future::block_on函数来运行异步函数hello_async.
+pub fn test_block_on() {
+    future::block_on(hello_async());
+}
+
+///             async-std
+///  提供异步标准库的库,并扩展了标准库,使得在异步上下文中进行文件IO,网络操作和任务管理等操作更加便捷.提供了你所习惯的所有接口
+///的异步形式,且准备好用于Rust的async/await.
+/// features:
+/// - 现代:从零开始针对std::future 和 async/await构建,编译速度极快
+/// - 快速:提供可靠的分配器和线程池,以及超高吞吐量和可预测的低延迟
+/// - 直观:与标准库完全对等.
+/// - 清晰:详细的文档和可访问的指南
+
+
+use async_std::task;
+
+async fn hello_async_std() {
+    println!("hello async_std");
+}
+
+///尽管hell_async_std是异步的,我们可以用同步的方式调用它,不需要手动处理future.
+/// async/await语法隐藏了future的细节,极大方便了异步编程,借助async_std我们可轻松使用async/await编写异步rust代码
+pub fn test_async_std_hello() {
+    task::block_on(hello_async_std());
+}
+
+/// smol
+/// smol是一个超轻量级的异步运行时库,专为简化异步rust代码而设计,其提供了一个高效的方式来管理异步任务.
+/// -轻量级:轻量级以便快速启动和低资源开销
+/// - 简洁API:简洁API使得异步任务的创建,组合和运行变得直观和简单
+/// - 零配置:无须复杂配置,可直接在现有的Rust项目中使用
+/// - 异步IO操作:支持异步文件IO,网络操作等.
+
+use smol::block_on;
+
+pub fn smol_async() {
+    smol::block_on(async { println!("hello async smol") });
+}
+
+
+
+use futures::future::{Select,join,FutureExt};
+/// try_join,join,select,zip
+/// Rust中两个常见的宏用于同时等待多个future: select && join.
+/// select!可同时等待多个future,且只处理最先完成的那个future.
+fn select_macro(){
+    let future1 = async{/* future 1*/};
+    let future2 = async { /* future 2*/ };
+    let result = select! {
+        res1 = future1==>{/* handle result of future 1 */},
+        res2= future2==>{/* handle result of future2 */},
+    };
+}
+
+/// join macro可同时等待多个future,并处理所有future结果
+fn join_macro(){
+    let future1 = async{/* future 1*/};
+    let future2 = async { /* future 2*/ };
+    join!(future1,future2);
 }
