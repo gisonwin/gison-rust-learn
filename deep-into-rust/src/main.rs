@@ -1,6 +1,7 @@
 mod thread_learn;
 mod threadpool;
 mod async_await;
+mod sync_primitive;
 
 // use thread_learn::thread_learn;
 use std::{thread, time::Duration};
