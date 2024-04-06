@@ -1,6 +1,6 @@
 use std::cell::RefCell;
-use std::sync::{Arc, Mutex, Once};
-use std::thread;
+use std::sync::{Arc, Barrier, Mutex, Once};
+use std::{thread, time};
 use async_std::prelude::FutureExt;
 
 ///同步是多线程程序中一个重要概念,多线程环境下,多个线程可能同时访问某个共享资源,这就导致数据竞争或数据不一致的问题.为了保证数据的安全,需要进行同步操作.
@@ -119,25 +119,87 @@ pub fn sync_once_example() {
         print!("init once invoke again");
     });
 }
+
 ///使用场景:全局初始化:在程序启动时执行一些全局初始化操作,如初始化全局变量,加载配置等,懒加载:在需要时进行一次性初始化,如懒加载全局配置.
 ///单例模式:通过Once可以实现线程安全的单例模式,确保某个对象在整个程序生命周期内只被初始化一次.
 
-pub fn sync_once_load_config(){
+pub fn sync_once_load_config() {
     use std::sync::Once;
-    static mut GLOBAL_CONFIG:Option<String> = None;
-    static INIT:Once = Once::new();
-    fn init_global_config(){
+    static mut GLOBAL_CONFIG: Option<String> = None;
+    static INIT: Once = Once::new();
+    fn init_global_config() {
         unsafe {
             GLOBAL_CONFIG = Some("Init global config".to_string());
         }
     }
-    fn get_global_config() -> &'static str{
+    fn get_global_config() -> &'static str {
         INIT.call_once(|| init_global_config());
-        unsafe{
+        unsafe {
             GLOBAL_CONFIG.as_ref().unwrap()
         }
-
     }
-    println!("{}",get_global_config());
-    println!("{}",get_global_config());
+    println!("{}", get_global_config());
+    println!("{}", get_global_config());
+}
+
+/// get_global_config函数通过Once确保init_global_config函数只会被调用一次,从而实现了全局配置的懒加载.
+/// OnceCell和OnceLock都是同一族的单次初始化的并发原语,二者区别是:Once是用于确保某个操作在整个程序生命周期内只执行一次的原语,适用于
+/// 全局初始化,懒加载和单例模式等场景.OnceCell是一个针对某种数据类型进行包装的懒加载容器,可以在需要时执行一次性初始化,并在之后提供对
+/// 初始化值的访问,OnceLock是一个可用于线程安全的懒加载的原语,类似OnceCell,但更简单,只能存储Copy类型的数据,OnceCell可存储任意类型数据.
+/// 屏障/栅栏 Barrier
+/// Barrier是Rust标准库中一种并发原语,用在多个线程之间创建一个同步点.它允许多个线程在某个点上等待,直到所有线程都到达该点,然后它们可同时继续执行.
+
+
+pub fn barrier_example() {
+    use std::sync::{Arc, Barrier};
+    use std::thread;
+    let barrier = Arc::new(Barrier::new(3)); //有3个线程参与同步
+    let mut handles = vec![]; //创建多个线程
+    for i in 0..3 {
+        let barrier = Arc::clone(&barrier);
+        let handle = thread::spawn(move || {
+            println!("Thread {} working", i);
+            thread::sleep(std::time::Duration::from_secs(i as u64));
+
+            barrier.wait();
+            println!("Thread {} resumed", i);
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
+/// 上例中创建了个barrier,并指定了参与同步的线程数量为3.然后创建了3个线程,每个线程模拟一些工作,然后调用barrier.wait()来等待其他线程.
+/// 当所有线程都调用了wait后,它们同时继续执行.使用场景-并行计算:当需要确保多个线程在某个点上同步,以便执行某些计算或任务时,可以使用barrier.
+/// 迭代步骤同步:一些算法中,可能需要多个步骤,每个步骤的结果都依赖于其他步骤的完成.Barrier可以用于确保所有线程完成当前步骤后再继续下一步.
+/// 协同工作阶段:在多阶段的任务中,可使用barrier来同步各个阶段.其灵活性在协调多个线程的执行流程时非常有用.
+/// 一旦所有线程都通过wait方法达到同步点后,barrier就被重置,可再次使用,这种重置操作是自动的.barrier内部状态会被重置,下一次调用wait方法时
+/// 线程会重新被阻塞,直到所有线程再次到达同步点.这样barrier可被循环使用,用于多轮的同步.
+
+pub fn barrier_reuse_example() {
+    use rand::{thread_rng, Rng};
+    let barrier = Arc::new(Barrier::new(10));
+    let mut handles = vec![];
+    for _ in 0..10 {
+        let barrier = barrier.clone();
+        handles.push(thread::spawn(move || {
+            println!("before wait1");
+            let dur = thread_rng().gen_range(100, 1000);
+            thread::sleep(std::time::Duration::from_millis(dur));
+            barrier.wait();
+            println!("after wait");
+            thread::sleep(time::Duration::from_secs(1));
+
+            barrier.wait();
+
+            println!("after wait again");
+        }));
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }

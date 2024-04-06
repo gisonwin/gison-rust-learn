@@ -541,6 +541,7 @@ dependencies = [
  "futures",
  "futures-lite 2.3.0",
  "poolite",
+ "rand 0.4.6",
  "rayon",
  "scoped-thread-pool",
  "smol",
