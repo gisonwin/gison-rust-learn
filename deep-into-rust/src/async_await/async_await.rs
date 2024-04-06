@@ -117,8 +117,8 @@ async fn get_two_sites_async() {
     let future_one = download_async("https://www.foo.com");
     let future_two = download_async("https://www.bar.com");
     //同时运行两个future,直至完成
-    let x = join!(future_one,future_two).await;
-    println!("{}", x);
+    // let x = join!(future_one,future_two).await;
+    // println!("{}", x);
 }
 
 fn download_async(p0: &str) {
@@ -168,23 +168,23 @@ pub fn tokio_async() {
 /// - Utilities: 一些组合,创建futures函数
 
 
-pub fn futures_async() {
-    let pool = ThreadPool::new(Default::default()).expect("Failed to build pool");
-    let (tx, rx) = mpsc::unbounded_channel::<i32>();
-    let fut_values = async {
-        let fut_tx_result = async move {
-            (0..100).for_each(|v| {
-                tx.unbounded_send(v).expect("failed to send");
-            })
-        };
-        pool.spawn_ok(fut_tx_result);
-        let fut_values = rx.map(|v| v * 2).collect();
-        fut_values.await
-    };
-
-    // let values: Vec<i32> = executor::block_on(fut_values);
-    // println!("Values={:?}", values);
-}
+// pub fn futures_async() {
+//     let pool = ThreadPool::new(Default::default()).expect("Failed to build pool");
+//     let (tx, rx) = mpsc::unbounded_channel::<i32>();
+//     let fut_values = async {
+//         let fut_tx_result = async move {
+//             (0..100).for_each(|v| {
+//                 tx.unbounded_send(v).expect("failed to send");
+//             })
+//         };
+//         pool.spawn_ok(fut_tx_result);
+//         let fut_values = rx.map(|v| v * 2).collect();
+//         fut_values.await
+//     };
+//
+//     // let values: Vec<i32> = executor::block_on(fut_values);
+//     // println!("Values={:?}", values);
+// }
 
 /// 上例展示使用futures和线程池进行异步编程
 /// 1 创建线程池pool 2 创建一个无边界的通道 tx,rx用来在任务间传递数据 3 定义一个异步任务fut_values,首先用spawn_ok在线程池中异步执行一个任务
@@ -244,23 +244,23 @@ pub fn smol_async() {
 }
 
 
+use futures::future::{Select, join, FutureExt};
 
-use futures::future::{Select,join,FutureExt};
-/// try_join,join,select,zip
-/// Rust中两个常见的宏用于同时等待多个future: select && join.
-/// select!可同时等待多个future,且只处理最先完成的那个future.
-fn select_macro(){
-    let future1 = async{/* future 1*/};
-    let future2 = async { /* future 2*/ };
-    let result = select! {
-        res1 = future1==>{/* handle result of future 1 */},
-        res2= future2==>{/* handle result of future2 */},
-    };
-}
+// try_join,join,select,zip
+// Rust中两个常见的宏用于同时等待多个future: select && join.
+// select!可同时等待多个future,且只处理最先完成的那个future.
+// fn select_macro() {
+//     let future1 = async { /* future 1*/ };
+//     let future2 = async { /* future 2*/ };
+//     let result = select! {
+//         res1 = future1==>{/* handle result of future 1 */},
+//         res2= future2==>{/* handle result of future2 */},
+//     };
+// }
 
-/// join macro可同时等待多个future,并处理所有future结果
-fn join_macro(){
-    let future1 = async{/* future 1*/};
-    let future2 = async { /* future 2*/ };
-    join!(future1,future2);
-}
+// join macro可同时等待多个future,并处理所有future结果
+// fn join_macro() {
+//     let future1 = async { /* future 1*/ };
+//     let future2 = async { /* future 2*/ };
+//     join!(future1,future2);
+// }
