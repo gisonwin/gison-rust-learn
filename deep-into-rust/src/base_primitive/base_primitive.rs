@@ -1,5 +1,7 @@
+// #![feature(exclusive_wrapper)]
+// use std::sync::Exclusive;
 use std::cell::RefCell;
-use std::sync::{Arc, Barrier, Mutex, Once};
+use std::sync::{Arc, Barrier, Condvar, Mutex, Once};
 use std::{thread, time};
 use async_std::prelude::FutureExt;
 
@@ -203,3 +205,79 @@ pub fn barrier_reuse_example() {
         handle.join().unwrap();
     }
 }
+
+/// 条件变量condvar
+/// Condvar是Rust标准库中条件变量(Condition Variable),用于多线程间进行线程间协调和通信。条件变量允许线程等待某个特定的条件成立，当条件满足时，线程可以被唤醒并继续执行.
+/// 下例创建了一个Mutex和Condvar，其中Mutex用于保护共享状态(条件)，而Condvar用于等待和唤醒线程。多个线程在Mutex加锁后，通过condvar.wait()方法等待条件满足，然后在主线程中修改
+/// 条件，并通过condvar.notify_all()唤醒所有等待的线程。
+///
+pub fn sync_condvar_example() {
+    use std::sync::{Arc, Mutex, Condvar};
+    use std::thread;
+    let mutex = Arc::new(Mutex::new(false));
+    let condvar = Arc::new(Condvar::new());
+
+    let mut handles = vec![];
+    for i in 0..3 {
+        let mutex = Arc::clone(&mutex);
+        let condvar = Arc::clone(&condvar);
+        let handle = thread::spawn(move || {
+            let mut guard = mutex.lock().unwrap();//获取mutex 锁
+            while !*guard {
+                guard = condvar.wait(guard).unwrap();
+            }
+            println!("Thread{} woke up", i)
+        });
+        handles.push(handle);
+    }
+    //模拟条件满足后唤醒等待的线程
+    thread::sleep(std::time::Duration::from_secs(2));
+
+    //修改条件，并唤醒等待的线程
+    {
+        let mut guard = mutex.lock().unwrap();
+        *guard = true;
+        condvar.notify_all();
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
+/// 使用场景:
+/// - 线程间同步:Condvar可用于线程之间同步,使得线程能够等待某个条件的成立而不是轮询检查.
+/// - 生产者-消费者模型:多线程环境中,生产者线程可通过条件变量通知消费者线程有新的数据产生
+/// - 线程池:线程池中,任务线程可以等待条件变量,等待新的任务到达时被唤醒执行.
+/// Condvar一般配合mutex使用,确保在等待和修改条件时的线程安全性.通过调用notify_one()发出信号,信号发出后,Condvar随机选一个正在等待信号的线程,并释放该线程.
+/// 通过调用notify_all()发出信号,信号发出后Condvar会释放所有正在等待信号的线程.
+
+
+
+///  LazyCell && LazyLock
+/// 二者均用于懒惰初始化对象的工具,LazyCell用于懒惰初始化值,LazyLock用于懒惰初始化资源.
+///---------------------------------------------------------------------------
+///类型            用途             初始化时机                   线程安全
+///---------------------------------------------------------------------------
+///LazyCell    懒惰初始化值           第一次访问                        否
+///LazyLock    懒惰初始化资源          第一次获取锁                      是
+///OnceCell    懒惰初始化单例值         第一次调用                     get_or_init()方法
+///OnceLock    懒惰初始化互斥锁         第一次调用                     lock()方法
+///---------------------------------------------------------------------------
+
+
+///           Exclusive
+// Rust中Exclusive是用于保证某个资源只被一个线程访问的工具,std::sync::Exclusive
+// Exclusive 仅提供对底层值的可变访问,也称被底层值的独占访问,它不提供对底层值的不可变或共享访问.
+// 虽然看起来不太有用,但它允许Exclusive无条件实现Sync.sync的安全要求是,对于 Exclusive而言,它必须可安全地跨线程共享,就是说
+// &Exclusive跨越线程时必须是安全的.
+// pub fn sync_exclusive_example() {
+//     use std::sync::Exclusive;
+//     let mut exclusive = Exclusive::new(92);
+//     println!("ready");
+//     std::thread::spawn(move || {
+//         let counter = exclusive.get_mut();
+//         println!("{}", *counter);
+//         *counter = 100;
+//     }).join().unwrap();
+// }
