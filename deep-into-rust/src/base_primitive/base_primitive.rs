@@ -3,6 +3,9 @@
 use std::cell::RefCell;
 use std::sync::{Arc, Barrier, Condvar, Mutex, Once};
 use std::{thread, time};
+use std::rc::Rc;
+use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::{channel, sync_channel};
 use async_std::prelude::FutureExt;
 
 ///同步是多线程程序中一个重要概念,多线程环境下,多个线程可能同时访问某个共享资源,这就导致数据竞争或数据不一致的问题.为了保证数据的安全,需要进行同步操作.
@@ -266,8 +269,8 @@ pub fn sync_condvar_example() {
 ///---------------------------------------------------------------------------
 
 
-///           Exclusive
-// Rust中Exclusive是用于保证某个资源只被一个线程访问的工具,std::sync::Exclusive
+//           Exclusive
+// Rust中Exclusive是用于保证某个资源只被一个线程访问的工具,std::sync::Exclusive.
 // Exclusive 仅提供对底层值的可变访问,也称被底层值的独占访问,它不提供对底层值的不可变或共享访问.
 // 虽然看起来不太有用,但它允许Exclusive无条件实现Sync.sync的安全要求是,对于 Exclusive而言,它必须可安全地跨线程共享,就是说
 // &Exclusive跨越线程时必须是安全的.
@@ -281,3 +284,105 @@ pub fn sync_condvar_example() {
 //         *counter = 100;
 //     }).join().unwrap();
 // }
+
+/// mpsc
+/// mpsc是标准库中一个模块，提供了多生产者，单消费者(Multiple Producers,Single Consumer)的消息传递通道。mpsc是multiple-producers,single-consumer的缩写。
+/// 该模块基于channel传递消息，具体定义了三具类型： Sender,SyncSender,Receiver
+/// Sender:发送者，用于异步发送消息到Receiver，可clone
+/// SyncSender：同步发送者，用于同步发送消息到Receiver,可clone
+/// Receiver：接收者，用于从异步channel或同步channel中接收令牌，只能有一个线程访问。
+/// 通道有两种类型:异步的，无限缓冲区的通道。channel函数返回一个(Sender，Receiver)元组，其中所有发送将是异步的(永不阻塞)。该通道在概念上具有无限的缓冲区。
+/// 同步的，有办的通道，sync_channel函数返回一个(SyncSender,Receiver)元组，等发送消息的存储区是一个固定大小的预分配缓冲区。所有发送都是同步的，通过阻塞直到有空闲的缓冲区空间。如果设置大小为0也是允许的，
+/// 这将使通道变成一个“约定”通道，每个发送方原子地将一条消息交给接收方。
+/// 使用场景:并发消息传递：适用于多个线程(生产者)向一个线程(消费者)发送消息的场景。任务协调：用于协调多个并发任务的执行流程。
+/// rust的mpsc和go的channel类似，使用起来比较简单
+pub fn simple_channel_example() {
+    use std::thread;
+    use std::sync::mpsc::channel;
+    let (tx, rx) = channel();
+    thread::spawn(move || {
+        tx.send(10).unwrap();
+    });
+    assert_eq!(rx.recv().unwrap(), 10);
+}
+
+pub fn mpsc_channel_example() {
+    //create a shared channel that can be sent along from many threads where tx is the sending half(tx for transmission),
+    //rs is the receiving half(rs for receiving).
+    let (tx, rx) = channel();
+    for i in 0..10 {
+        let tx = tx.clone();
+        thread::spawn(move || {
+            tx.send(i).unwrap();
+        });
+    }
+    for i in 0..10 {
+        let j = rx.recv().unwrap();
+        assert!(j >= 0 && j < 10);
+    }
+}
+
+pub fn mpsc_sync_channel_example() {
+    use std::sync::mpsc::sync_channel;
+    let (tx, rx) = sync_channel(3);
+    for i in 0..3 {
+        let tx = tx.clone();
+        thread::spawn(move || {
+            tx.send(i).unwrap();
+            println!("send {}", i);
+        });
+    }
+    //drop the last sender to stop rx waiting for message.the program will not complete if we comment this out.
+    // ALL 'tx' needs to be dropped for 'rx' to have 'Err'.
+    drop(tx);
+    while let Ok(msg) = rx.recv() {
+        println!("receive {msg}");
+    }
+    println!("completed");
+}
+
+/// Rust标准库中，没有提供原生MPMC(Multiple Producers,Multiple Consumers)通道。std::sync::mpsc模块提供的是单一消费通道，主要出于设计和性能考虑。
+/// mpsc通道实现相对简单,更容易满足特定的性能需求,并且在很多情况下是足够的.同时其场景最常见,如在线程池中有一个任务队列,多个生产者将任务推送队列中,而单个消费者负责执行这些任务.
+
+
+/// 信号量 Semaphore
+///  原子操作 atomic
+/// Rust中原子操作(Atomic Operation)是一种特殊操作,可在多线程环境中以原子方式进行,即不会被其他线程操作打断.原子操作可保证数据的线程安全性,避免数据竞争.std::sync::atomic模块提供一系列用于
+///原子操作的类型和函数.atomic适用场景:- 保证某个值的一致性.- 防止多个线程同时修改某个值.-实现互斥锁.
+/// Rust原子类型遵循与C++20 atomic相同的规则.atomic_ref.创建Rust原子类型的一个引用,相当于C++中创建一个atomic_ref.当共享引用的生命周期结束时,atomic_ref也会被销毁.
+/// AtomicBool,AtomicIsize,AtomicUsize,AtomicI8,AtomicU16. 每个方法都带有一个Ordering参数,表示该操作的内存屏障的强度.原子变量在线程间安全共享(实现了Sync),但它本身不提供共享机制,遵循Rust的线程模型.
+/// 共享一个原子变量常见方式是把它放在一个Arc中(一个原子引用计数的共享指针).原子类型可存储在静态变量中,像AtomicBool::new这样常量化初始化器初始化.原子静态变量通常用于懒全局初始化.
+/// AtomicI64和I64之间转换,以及原子操作load,store,swap,compare_and_swap (CAS),compare_exchange,fetch_add,fetch_sub,fetch_and,fetch_nand,fetch_or,fetch_xor,fetch_max,fetch_min.
+/// -store 原子写入 -load 原子读取 -swap 原子交换 -compare_and_swap 原子比较并交换 -fetch_add:原子加法后返回旧值.
+/// Rust中Ordering枚举用于指定原子操作时的内存屏障(memory ordering).
+/// - Ordering::Relaxed:Rust中最轻量级的内存屏障,没有对执行顺序进行强制排序.允许编译器和处理器在原子操作周围进行指令重排;C++具有相似语义,允许编译器和处理器在原子操作周围进行轻量级指令重排.
+/// - Ordering::Acquire:Rust插入一个获取内存屏障,防止后续的读操作被重排序到当前操作之前.确保当前操作之前的所有读取操作都在当前操作之前执行.C++中memory_order_acquire表示获取操作,确保当前操作之前的读取操作都在当前操作之前执行.
+/// - Ordering::Release:Rust插入一个内存屏障,防止之前写操作被重排序到当前操作之后.确保当前操作之后的所有写操作都在当前操作之后执行.C++中memory_order_release表示释放操作,确保之前的写操作都在当前操作之后执行.
+/// - Ordering::AcqRel:Rust插入一个获取释放内存屏障,既确保当前操作之前的所有读操作都在当前操作之前执行,又确保之前的所有写操作都在当前操作之后执行.它提供一种平衡,适用于某些获取和释放操作交替进行的场景.C++也是表示获取释放操作
+///  ,它是获取和释放的组合.确保当前操作之前的所有读取操作都在当前操作之前执行,同时确保之前的所有写操作都在当前操作之后执行.
+/// - Ordering:SeqCst:Rust插入一个全序内存屏障,保证所有线程都能看到一致的操作顺序.是最强内存顺序,用于实现全局同步.C++中,memory_order_seq_cst也表示全序操作,保证所有线程都能看到一致的操作顺序.也是C++中最强内存顺序.
+/// 合理选择Ordering可最大程度提高性能,同时保证需要的内存序约束.使用原子操作时需要小心选择合适的Ordering,避免竞态条件和数据竞争.
+
+///Ordering::Relaxed是最轻量级的内存顺序,允许编译器和处理器在原子操作周围进行指令重排,不提供强制的执行排序.这样以获取更高的性能.
+pub fn ordering_relaxed_example() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let atomic_bool = AtomicBool::new(false);
+
+
+    let producer_thread = thread::scope(|s| {
+        s.spawn(move || {
+            atomic_bool.store(true, Ordering::Relaxed);
+        });
+        s.spawn(move || {
+            let value = atomic_bool.load(Ordering::Relaxed);
+            println!("Received value: {}", value);
+        })
+    });
+    // let consumer_thread = thread::spawn(move || {
+    //     let value = atomic_bool.load(Ordering::Relaxed);
+    //     println!("Received value: {}", value);
+    // });
+    producer_thread.join().unwrap();
+    // consumer_thread.join().unwrap();
+}
