@@ -364,25 +364,30 @@ pub fn mpsc_sync_channel_example() {
 /// 合理选择Ordering可最大程度提高性能,同时保证需要的内存序约束.使用原子操作时需要小心选择合适的Ordering,避免竞态条件和数据竞争.
 
 ///Ordering::Relaxed是最轻量级的内存顺序,允许编译器和处理器在原子操作周围进行指令重排,不提供强制的执行排序.这样以获取更高的性能.
-pub fn ordering_relaxed_example() {
-    use std::sync::atomic::{AtomicBool, Ordering};
-
-    let atomic_bool = AtomicBool::new(false);
+pub fn test(){}
 
 
-    let producer_thread = thread::scope(|s| {
-        s.spawn(move || {
-            atomic_bool.store(true, Ordering::Relaxed);
-        });
-        s.spawn(move || {
-            let value = atomic_bool.load(Ordering::Relaxed);
-            println!("Received value: {}", value);
-        })
-    });
-    // let consumer_thread = thread::spawn(move || {
-    //     let value = atomic_bool.load(Ordering::Relaxed);
-    //     println!("Received value: {}", value);
-    // });
-    producer_thread.join().unwrap();
-    // consumer_thread.join().unwrap();
-}
+
+
+// pub fn ordering_relaxed_example() {
+//     use std::sync::atomic::{AtomicBool, Ordering};
+//
+//     let atomic_bool = AtomicBool::new(false);
+//
+//
+//     let producer_thread = thread::scope(|s| {
+//         s.spawn(move || {
+//             atomic_bool.store(true, Ordering::Relaxed);
+//         });
+//         s.spawn(move || {
+//             let value = atomic_bool.load(Ordering::Relaxed);
+//             println!("Received value: {}", value);
+//         })
+//     });
+//     // let consumer_thread = thread::spawn(move || {
+//     //     let value = atomic_bool.load(Ordering::Relaxed);
+//     //     println!("Received value: {}", value);
+//     // });
+//     producer_thread.join().unwrap();
+//     // consumer_thread.join().unwrap();
+// }
