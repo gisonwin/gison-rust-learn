@@ -21,8 +21,8 @@ pub fn create_process_example() {
     let output3 = Command::new("ls").arg("-l").current_dir("/path/to/your/directory").output().expect("Failed to execute command");
     println!("output3:{:?}", String::from_utf8_lossy(&output3.stdout));
     //uid,gid分别是设置进程的用户标识和组标识.注意这里需要管理员身份或有足够的权限来更改进程的用户标识 和组标识
-    let output4 = Command::new("whoami").uid(1000).gid(1000).output().expect("Failed to execute command");
-    println!("output4:{:?}", String::from_utf8_lossy(&output4.stdout));
+    // let output4 = Command::new("whoami").uid(1000).gid(1000).output().expect("Failed to execute command");
+    // println!("output4:{:?}", String::from_utf8_lossy(&output4.stdout));
 }
 
 
