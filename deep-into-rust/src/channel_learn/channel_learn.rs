@@ -1,5 +1,7 @@
+use std::fmt::format;
 use std::sync::mpsc;
 use std::thread;
+use smol::channel::unbounded;
 
 /// Channel是Rust中用于不同线程之间传递消息的机制。主要有以下几个特点：
 /// - 通道提供了一种在线程之间安全传递数据的方式.向通道发送数据不会导致竞争条件或死锁.=通道运用了Rust所有权系统来确保消息只被一个接收者获取.
@@ -57,6 +59,136 @@ pub fn mpsc_channel_example2() {
     }
 }
 
+pub fn mpsc_sync_channel_example2() {
+    let (sender, receiver) = mpsc::sync_channel(3);
+    for i in 0..3 {
+        let sender = sender.clone();
+        thread::spawn(move || sender.send(format!("{}-{}", "ok", i)).unwrap()
+        );
+    }
+    drop(sender);
+    while let Ok(msg) = receiver.recv() {
+        println!("{msg}");
+    }
+    println!("mpsc_sync_channel_example2 completed");
+}
 
+pub fn mpsc_sync_channel_with_zero() {
+    let (sender, receiver) = mpsc::sync_channel::<String>(0);
+    //producer thread
+    thread::spawn(move || {
+        for i in 0..5 {
+            let msg_string = format!("{}-{}", "producer", i);
+            sender.send(msg_string.clone()).expect("Failed to send message");
+            println!("Send message:{msg_string}");
+        }
+    });
+    //consumer thread
+    thread::spawn(move || {
+        for i in 0..5 {
+            let received_message = receiver.recv().expect("Failed to receive a message");
+            println!("Received message: {received_message}");
+        }
+    });
+    //wait for all thread complete
+    thread::sleep(std::time::Duration::from_secs(10));
+}
+
+///下面是一些知名通道库,crossbeam-channel,flume,tokio,crossfire等,可以满足不同的需求.
+/// crossbeam-channel,提供了多生产者多消费者的线程安全通道.主要功能和特点:
+/// - 提供unbounded和bounded两种通道.unbounded通道可以无限制地发送消息,bounded通道可以设置容量上限.
+/// - 支持多生产者多消费者,多个线程可同时发送或接收消息.
+/// - 提供select!宏,可同时在多个通道上进行操作.类似Go lang channel的便利.提供了Receiver,Sender等抽象,Usage风格友好.
+
+pub fn crossbeam_channel_bounded() {
+    use crossbeam_channel::{bounded, Sender, Receiver};
+    use std::thread;
+    let (sender, receiver): (Sender<i32>, Receiver<i32>) = bounded(10);
+    let producer = thread::spawn(move || {
+        for i in 0..10 {
+            sender.send(i).unwrap();
+            println!("Send: {i}");
+        }
+    });
+
+    let consumer = thread::spawn(move || {
+        for i in 0..10 {
+            let data = receiver.recv().unwrap();
+            println!("Received:{data}");
+        }
+    });
+    //创建了一个有界通道为10,然后启动了一个生产者线程,向通道发送0到9数字,同时启动了一个消费者线程,从通道接收数据并打印出来,最后等待两个线程完成.
+    producer.join().unwrap();
+    consumer.join().unwrap();
+}
+
+///理论上生产者线程不断发送递增的数字到无界通道,而消费者线程只接收前10个数字并打印出来.通道由于是无界的,生产者线程可以一直发送数据,但在实际运行中会发生
+/// called `Result::unwrap()` on an `Err` value: "SendError(..)"
+pub fn crossbeam_channel_unbounded() {
+    use crossbeam_channel::{unbounded, Sender, Receiver};
+    use std::thread;
+    let (sender, receiver): (Sender<i32>, Receiver<i32>) = unbounded();
+
+    let producer = thread::spawn(move || {
+        for i in 0.. {
+            sender.send(i).expect("Failed to send message");
+            println!("Producer: {i}");
+        }
+    });
+    let consumer = thread::spawn(move || {
+        for i in 0..15 {
+            let data = receiver.recv().unwrap();
+            println!("Consumer-- {data}");
+        }
+    });
+    producer.join().unwrap();
+    consumer.join().unwrap();
+}
+
+///select! macro是crossbeam-channel提供的一种用于监听多个通道的事件并执行相应的操作的方式.对于多路复用情况下非常有用,可根据不同通道事件执行不同的逻辑.
+/// 演示使用select!监听两个通道,并根据事件执行相应的操作.
+pub fn crossbeam_select_macro() {
+    use crossbeam_channel::{unbounded, select, Sender, Receiver};
+    use std::thread;
+//create two channels
+    let (sender1, receiver1): (Sender<&str>, Receiver<&str>) = unbounded();
+    let (sender2, receiver2): (Sender<&str>, Receiver<&str>) = unbounded();
+    //create a producer ,send message to channel one
+    let producer1 = thread::spawn(move || {
+        for i in 0..5 {
+            sender1.send(&format!("Channel 1:Message {}", i)).unwrap();
+            thread::sleep(std::time::Duration::from_millis(200));
+        }
+    });
+    //create second producer send message to channel two
+    let producer2 = thread::spawn(move || {
+        for i in 0..5 {
+            sender2.send(&format!("Channel 2:Message:{}", i)).unwrap();
+            thread::sleep(std::time::Duration::from_millis(300));
+        }
+    });
+    let consumer = thread::spawn(move || {
+        for i in 0..10 {
+            select! {
+                recv(receiver1) -> msg1 =>{
+                    match msg1 {
+                        Ok(msg) => println!("Received from channel 1:{}",msg),
+                        Err(_) => println!("Channel 1 closed"),
+                    }
+                }
+                recv(receiver2) -> msg2 =>{
+                    match msg2 {
+                        Ok(msg) => println!("Received from Channel 2:{}",msg),
+                        Err(_) => println!("Channel 2 closed"),
+                    }
+                }
+            }
+        }
+    });
+
+    producer1.join().unwrap();
+    producer2.join().unwrap();
+    consumer.join().unwrap();
+}
 
 

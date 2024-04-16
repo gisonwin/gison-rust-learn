@@ -10,7 +10,7 @@ mod channel_learn;
 // use thread_learn::thread_learn;
 use std::{thread, time::Duration};
 use crate::base_primitive::base_primitive::{arc_mutex_example, mpsc_channel_example, mpsc_sync_channel_example, simple_channel_example, sync_once_example};
-use crate::channel_learn::channel_learn::{channel_example, mpsc_channel_example2};
+use crate::channel_learn::channel_learn::{channel_example, crossbeam_channel_bounded, crossbeam_channel_unbounded, crossbeam_select_macro, mpsc_channel_example2, mpsc_sync_channel_example2, mpsc_sync_channel_with_zero};
 use crate::concurrent_set::concurrent_set::{arc_dashmap_example, arc_mutex_hashmap_example, arc_mutex_vec_example, arc_swap_examples, ev_map_example};
 use crate::thread_learn::thread_learn::*;
 use crate::threadpool::thread_pool::{poolite_fibonacci, rayon_thread_pool, scoped_threadpool, use_thread_pool};
@@ -156,7 +156,12 @@ fn main() {
     // ev_map_example();
     // arc_swap_examples();
     // channel_example();
-    mpsc_channel_example2();
+    // mpsc_channel_example2();
+    // mpsc_sync_channel_example2();
+    // mpsc_sync_channel_with_zero();
+    // crossbeam_channel_bounded();
+    // crossbeam_channel_unbounded();
+    crossbeam_select_macro();
 }
 
 fn fibonacci(n: u128) -> u128 {
