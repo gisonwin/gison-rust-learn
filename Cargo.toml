@@ -7,4 +7,4 @@ edition = "2021"
 
 #[dependencies]
 [workspace]
-members = ["axum-learn", "hello-world", "generate-random-number","deep-into-rust"]
+members = ["axum-learn", "hello-world", "generate-random-number","deep-into-rust","rust-basic"]

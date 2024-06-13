@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/generate-random-number/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/deep-into-rust/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/deep-into-rust/src/thread_learn/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/rust-basic/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/deep-into-rust/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>

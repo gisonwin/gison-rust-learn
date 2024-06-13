@@ -1,5 +1,5 @@
-use axum::{routing::get,routing::post,http::StatusCode,Json,Router,response::Html};
-use serde::{Deserialize,Serialize};
+use axum::{http::StatusCode, Json, response::Html, Router, routing::get, routing::post};
+use serde::{Deserialize, Serialize};
 use tracing::info;
 
 #[tokio::main]
