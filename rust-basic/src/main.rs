@@ -102,9 +102,7 @@ fn learn_func() {
     let c = add_two_var(a, b);
     println!("c:{}", c);
 
-    let state = "中华人民共和国1";
 
-    let state = String::from("中华人民共和国2");
 }
 
 /// stack && heap
