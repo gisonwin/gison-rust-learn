@@ -1,3 +1,9 @@
+use crate::err_func::*;
+use crate::higher_func::*;
+
+pub mod higher_func;
+mod err_func;
+
 enum Flavor {
     Spicy,
     Sweet,
@@ -56,7 +62,49 @@ fn learn_struct() {
 fn main() {
     // learn_struct();
     // learn_number();
-    learn_trait();
+    // learn_trait();
+    // learn_func();
+    // learn_hf();
+    // fun_error();
+    // func_unwrap();
+    func_errs(MyError { detail: "自定义error detail".to_owned() });
+    // let rs = func_errs_char();
+}
+
+fn learn_hf() {
+    let result = mul_twice(mul, 4);
+    println!("{}", result);
+    let state = "中华人民共和国";
+    println!("{}", state.len());
+    // let state = String::from_utf8()
+    let res = mul_twice(add, 4);
+    println!("{}", res);
+    let numbers = vec![1, 2, 3, 4, 5, 6, 7, 8];
+    let collect = numbers.iter().map(|&x| x + x).collect::<Vec<_>>();
+    println!("{:?}", collect);
+    println!("{:?}", numbers);
+    let even = numbers.clone().into_iter().filter(|&x| x % 2 == 0).collect::<Vec<i32>>();
+    let odd = numbers.clone().into_iter().filter(|&x| x % 2 != 0).collect::<Vec<_>>();
+    println!("even={:?},odd={:?}", even, odd);
+    //reduce
+    let sum = numbers.clone().iter().fold(0, |acc, &x| acc + x);
+    println!("{}", sum);
+}
+
+
+fn add_two_var(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+fn learn_func() {
+    let a = 1;
+    let b = 2;
+    let c = add_two_var(a, b);
+    println!("c:{}", c);
+
+    let state = "中华人民共和国1";
+
+    let state = String::from("中华人民共和国2");
 }
 
 /// stack && heap
@@ -81,10 +129,11 @@ struct Point {
     x: i32,
     y: i32,
 }
-#[derive(Debug,Clone,Copy)]
-struct Book{
-    page:i32,
-    rating:f64,
+
+#[derive(Debug, Clone, Copy)]
+struct Book {
+    page: i32,
+    rating: f64,
 }
 
 
@@ -108,12 +157,12 @@ fn learn_trait() {
     println!("{:?},{:?}", x, y);
 
     //struct copy and clone
-    let b1 = Book{
-        page:100,
-        rating:0.1,
+    let b1 = Book {
+        page: 100,
+        rating: 0.1,
     };
     let b2 = b1;
-    println!("{:?},{:?}",b2,b1)
+    println!("{:?},{:?}", b2, b1)
 }
 
 
